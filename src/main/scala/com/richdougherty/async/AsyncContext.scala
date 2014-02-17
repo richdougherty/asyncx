@@ -1,5 +1,7 @@
 package com.richdougherty.async
 
+import scala.language.implicitConversions
+
 import scala.concurrent.ExecutionContext
 
 trait AsyncContext extends ExecutionContext {
