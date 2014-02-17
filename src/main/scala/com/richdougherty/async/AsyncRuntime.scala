@@ -2,46 +2,43 @@ package com.richdougherty.async
 
 import scala.annotation.tailrec
 import scala.concurrent.{ Future, Promise }
+import scala.util.control.NonFatal
 
 object AsyncRuntime {
-  def evaluate[A](step0: Step[A]): Future[A] = {
+  def evaluate[A](async0: Async[A]): Future[A] = {
+    import Async._
     val p = Promise[A]
+
+    def startLoop(async: Async[A], ac: AsyncContext) = try {
+      loop(async, ac)
+    } catch {
+      case NonFatal(t) => Failure(t)
+    }
+
     @tailrec
-    def loop(step: Step[A], acOrNull: AsyncContext): Unit = {
-      step match {
-        case Result(a) =>
+    def loop(async: Async[A], ac: AsyncContext): Unit = {
+      async match {
+        case Success(a) =>
           p.success(a)
-        case TrivialThunk(f) =>
-          loop(f(), acOrNull)
-        case AsyncThunk(f, ac) if (acOrNull == ac && (acOrNull canCombineExecutions ac)) =>
-          loop(f(), acOrNull)
-        case AsyncThunk(f, ac) =>
-          ac.execute(new Runnable {
-            def run() = reenterLoop(f(), ac)
-          })
+        case Thunk(f, ac1) if ac.canExecuteWithin(ac) =>
+          loop(f(), ac)
+        case Thunk(f, ac1) =>
+          switchContext(f, ac1)
       }
     }
-    def reenterLoop(step: Step[A], acOrNull: AsyncContext): Unit = {
-      loop(step, acOrNull)
+
+    def switchContext(f: () => Async[A], ac: AsyncContext): Unit = {
+      ac.execute(new Runnable {
+        def run() = try {
+          val next = f()
+          loop(next, ac)
+        } catch {
+          case NonFatal(t) => Failure(t)
+        }
+      })
     }
-    loop(step0, null)
+
+    startLoop(async0, TrivialAsyncContext)
     p.future
   }
-}
-
-sealed trait Step[+A] {
-  def map[B](f: A => B): Step[B]
-  def flatMap[B](f: A => Step[B]): Step[B]
-}
-final case class Result[+A](a: A) extends Step[A] {
-  def map[B](f: A => B): Step[B] = Result(f(a))
-  def flatMap[B](f: A => Step[B]): Step[B] = f(a)
-}
-final case class TrivialThunk[+A](x: () => Step[A]) extends Step[A] {
-  def map[B](f: A => B): Step[B] = TrivialThunk(() => x().map(f))
-  def flatMap[B](f: A => Step[B]): Step[B] = x().flatMap(f)
-}
-final case class AsyncThunk[+A](x: () => Step[A], ac: AsyncContext) extends Step[A] {
-  def map[B](f: A => B): Step[B] = AsyncThunk(() => x().map(f), ac)
-  def flatMap[B](f: A => Step[B]): Step[B] = x().flatMap(f)
 }

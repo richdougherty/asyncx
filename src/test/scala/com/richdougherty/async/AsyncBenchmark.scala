@@ -19,7 +19,7 @@ object AsyncBenchmark extends PerformanceTest {
 
   def ecForName(name: String): ExecutionContext = name match {
     case "fjp" => ExecutionContext.global
-    case "imm" => ImmediateAsyncContext
+    case "imm" => TrivialAsyncContext
     case _ => ???
   }
 
@@ -38,17 +38,17 @@ object AsyncBenchmark extends PerformanceTest {
     }
   }
 
-  performance of "AsyncFunc0" in {
+  performance of "Async" in {
     measure method "map" in {
       using(inputs) in { case (ecName, desiredMapCount) =>
         implicit val ac: AsyncContext = AsyncContext.combining(ecForName(ecName))
-        var func: AsyncFunc0[Int] = AsyncFunc0.Lifted(() => 0, ac)
+        var async: Async[Int] = Async(0)
         var mapCount = 0
         while (mapCount < desiredMapCount) {
-          func = func.map(_ + 1)
+          async = async.map(_ + 1)
           mapCount += 1
         }
-        Await.result(func.apply(), Duration.Inf)
+        Await.result(async.evaluate(), Duration.Inf)
       }
     }
   }
@@ -68,17 +68,17 @@ object AsyncBenchmark extends PerformanceTest {
     }
   }
 
-  performance of "AsyncFunc0" in {
+  performance of "Async" in {
     measure method "flatMap" in {
       using(inputs) in { case (ecName, desiredMapCount) =>
         implicit val ac: AsyncContext = AsyncContext.combining(ecForName(ecName))
-        var func: AsyncFunc0[Int] = AsyncFunc0.Lifted(() => 0, ac)
+        var async: Async[Int] = Async(0)
         var mapCount = 0
         while (mapCount < desiredMapCount) {
-          func = func.flatMap(x => AsyncFunc0.Lifted(() => x + 1, ac))
+          async = async.flatMap(x => Async(x + 1))
           mapCount += 1
         }
-        Await.result(func.apply(), Duration.Inf)
+        Await.result(async.evaluate(), Duration.Inf)
       }
     }
   }
