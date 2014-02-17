@@ -2,6 +2,8 @@ package com.richdougherty.async
 
 import scala.concurrent.Future
 
+import Async._
+
 trait AsyncFunc[-A,+B] {
   import AsyncFunc._
   def evaluate(a: A): Future[B] = AsyncRuntime.evaluate(apply(a))

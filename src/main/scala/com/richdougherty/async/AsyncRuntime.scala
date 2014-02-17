@@ -4,9 +4,10 @@ import scala.annotation.tailrec
 import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
+import Async._
+
 object AsyncRuntime {
   def evaluate[A](async0: Async[A]): Future[A] = {
-    import Async._
     val p = Promise[A]
 
     def startLoop(async: Async[A], ac: AsyncContext) = try {

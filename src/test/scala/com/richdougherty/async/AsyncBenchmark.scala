@@ -6,7 +6,7 @@ import scala.concurrent.duration.Duration
 
 object AsyncBenchmark extends PerformanceTest {
 
-  lazy val executor = SeparateJvmsExecutor(
+  lazy val executor = LocalExecutor/*SeparateJvmsExecutor*/(
     new Executor.Warmer.Default,
     Aggregator.min,
     new Measurer.Default)
