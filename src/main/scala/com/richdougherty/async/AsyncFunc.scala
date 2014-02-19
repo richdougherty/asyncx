@@ -10,9 +10,8 @@ trait AsyncFunc[-A,+B] {
   def apply(a: A): Async[B]
   def map[C](f: B => C)(implicit ac: AsyncContext): AsyncFunc[A,C] = Map(this, f, ac)
   def flatMap[C](f: B => AsyncFunc[B,C])(implicit ac: AsyncContext): AsyncFunc[A,C] = FlatMap(this, f, ac)
-  // def asyncMap[C]: AsyncFunc[AsyncFunc[B,C],AsyncFunc[A,C]] = AsyncMap[A,B,C]()
-  // def asyncFlatMap[C]: AsyncFunc[AsyncFunc[B,AsyncFunc[B,C]],AsyncFunc[A,C]] = TrivialLifted(f => FlatMap(this, f))
-  // def curry(a: A): Async[B] = Curry(this, a)
+  def asyncMap[C]: AsyncFunc[AsyncFunc[B,C],AsyncFunc[A,C]] = AsyncMap[A,B,C](this)
+  def asyncFlatMap[C]: AsyncFunc[AsyncFunc[B,AsyncFunc[B,C]],AsyncFunc[A,C]] = AsyncFlatMap[A,B,C](this)
 }
 
 object AsyncFunc {
@@ -23,28 +22,37 @@ object AsyncFunc {
     def apply(a: A) = Thunk(() => Success(f(a)), ac)
   }
 
-  // final case class TrivialLifted[A,B](f: A => B) extends AsyncFunc[A,B] {
-  //   def step(a: A) = TrivialThunk(() => Result(f(a)))
-  // }
-
   final case class Map[-A,B,+C](x: AsyncFunc[A,B], f: B => C, ac: AsyncContext) extends AsyncFunc[A,C] {
     def apply(a: A) = Thunk(() => x(a).map(f)(ac), TrivialAsyncContext)
   }
 
-  // final case class AsyncMap[A,B,C]() extends AsyncFunc[AsyncFunc[B,C],AsyncFunc[A,C]] {
-  //   def apply(a: A) = Thunk(() => x(a).map(flatMap(b => y.step(b)), )
-  // }
+  final case class AsyncMap[A,B,C](x: AsyncFunc[A,B]) extends AsyncFunc[AsyncFunc[B,C],AsyncFunc[A,C]] {
+    def apply(f: AsyncFunc[B,C]): Async[AsyncFunc[A,C]] = Success(new AsyncFunc[A,C] {
+      def apply(a: A): Async[C] = {
+        import Implicits.trivial
+        for {
+          b <- x(a)
+          c <- f(b)
+        } yield c
+      }
+    })
+  }
 
   final case class FlatMap[-A,B,+C](x: AsyncFunc[A,B], f: B => AsyncFunc[B,C], ac: AsyncContext) extends AsyncFunc[A,C] {
     def apply(a: A) = Thunk(() => x(a).flatMap(b => f(b)(b))(ac), TrivialAsyncContext)
   }
 
-  // final case class FlatMap[-A,B,+C](x: AsyncFunc[A,B], y: AsyncFunc[B,AsyncFunc[B,C]]) extends AsyncFunc[A,C] {
-  //   def step(a: A) = TrivialThunk(() => x.step(a).flatMap(b => y.step(b).flatMap(z => z.step(b))))
-  // }
-
-  // final case class Curry[A,+B](x: AsyncFunc[A,B], a: A) extends Async[B] {
-  //   def step = x.step(a)
-  // }
+  final case class AsyncFlatMap[A,B,C](x: AsyncFunc[A,B]) extends AsyncFunc[AsyncFunc[B,AsyncFunc[B,C]],AsyncFunc[A,C]] {
+    def apply(f: AsyncFunc[B,AsyncFunc[B,C]]): Async[AsyncFunc[A,C]] = Success(new AsyncFunc[A,C] {
+      def apply(a: A): Async[C] = {
+        import Implicits.trivial
+        for {
+          b <- x(a)
+          bfunc <- f(b)
+          c <- bfunc(b)
+        } yield c
+      }
+    })
+  }
 
 }

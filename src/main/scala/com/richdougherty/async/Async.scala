@@ -7,12 +7,11 @@ import scala.concurrent.Future
  * A reified asynchronous computation.
  */
 sealed trait Async[+A] {
-  //import Async._
   def evaluate(): Future[A] = AsyncRuntime.evaluate(this)
   def map[B](f: A => B)(implicit ac: AsyncContext): Async[B]
   def flatMap[B](f: A => Async[B])(implicit ac: AsyncContext): Async[B]
   def asyncMap[B]: AsyncFunc[AsyncFunc[A,B],Async[B]]
-  def asyncFlatMap[B]: AsyncFunc[AsyncFunc[A,Async[B]],Async[B]]// = AsyncFunc.TrivialLifted(f => FlatMap(this, f))
+  def asyncFlatMap[B]: AsyncFunc[AsyncFunc[A,Async[B]],Async[B]]
   def flatten[B](implicit ev: A <:< Async[B]): Async[B]
 }
 
@@ -49,51 +48,3 @@ object Async {
   }
 
 }
-
-// final case class Delayed[+A](fut: Future[A], t: FutureThunk[A]) extends Async[A] {
-//   def map[B](f: A => B)(implicit ac: AsyncContext): Async[B] = DelayedThunk(fut, )
-//   def flatMap[B](f: A => Async[B])(implicit ac: AsyncContext): Async[B] = Delayed(fut.flatMap(f))
-// }
-
-// object Delayed {
-//   val identity = FutureThunk(x: Try)
-//   final case class FutureThunk[-A,+B](x: Try[A] => Async[B], ac: ExecutionContext) {
-//     def map[C](f: B => C)(implicit ac: AsyncContext): Async[C] = FutureThunk()
-//     def flatMap[B](f: A => Async[B])(implicit ac: AsyncContext): Async[B] = Delayed(fut.flatMap(f))
-//   }
-// }
-
-// object DelayedThunk
-
-// final case class TrivialThunk[+A](x: () => Async[A]) extends Async[A] {
-//   def map[B](f: A => B): Async[B] = TrivialThunk(() => x().map(f))
-//   def flatMap[B](f: A => Async[B]): Async[B] = x().flatMap(f)
-// }
-
-//   def apply[A](f: () => A)(implicit ac: AsyncContext) = Lifted(f, ac)
-
-//   final case class Value[+A](a: A) extends Async[A] {
-//     def step = Result(a)
-//   }
-
-//   final case class AsyncThunk[+A](f: () => A, ac: AsyncContext) extends Async[A] {
-//     def step = AsyncThunk(() => Result(f()), ac)
-//   }
-
-//   // final case class Async[+A](step0: () => Async[A]) extends Async[A] {
-//   //   def step = step0
-//   // }
-
-//   final case class Map[A,+B](x: Async[A], y: AsyncFunc[A,B]) extends Async[B] {
-//     def step = TrivialThunk(() => x.step.flatMap(a => y.step(a)))
-//   }
-
-//   final case class FlatMap[A,+B](x: Async[A], y: AsyncFunc[A,Async[B]]) extends Async[B] {
-//     def step = TrivialThunk(() => x.step.flatMap(a => y.step(a).flatMap(z => z.step)))
-//   }
-
-//   final case class Flatten[+A](x: Async[Async[A]]) extends Async[A] {
-//     def step = x.step.flatMap(y => y.step)
-//   }
-
-// }

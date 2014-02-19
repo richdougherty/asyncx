@@ -19,6 +19,10 @@ object AsyncContext {
   }
 }
 
+object Implicits {
+  implicit val trivial = TrivialAsyncContext
+}
+
 object TrivialAsyncContext extends AsyncContext {
   def execute(r: Runnable) = r.run()
   def reportFailure(t: Throwable) = t.printStackTrace()

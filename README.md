@@ -1,13 +1,11 @@
 Experimental extensions to scala.concurrent.
 
+* Async[A] - a reified asynchronous computation, can be evaluated into a Future[A]
+* AsyncFunc[A,B] - a function that produces asynchronous computations
+* AsyncRuntime - an efficient evaluator for asynchronous computations - avoids the construction of intermediate Future values, merges executions into the same AsyncContext where possible
 * AsyncContext - an ExecutionContext that can optionally combine multiple Runnables in a single call to execute()
-* AsyncFunc0 - an `() => Future[A]` and an AsyncContext to run it in
-* AsyncFunc1 - an `A => Future[B]` and an AsyncContext to run it in
-* AsyncRuntime - an efficient evaluator for asynchronous operations - avoids the construction of intermediate Future values
 
-Monadic operations (map, flatMap) on AsyncFunc0 shows around a 2x speedup compared to the same operations on Future. This is due to avoiding construction of intermediate Futures, and also possibly due to an optimisation which merges executions that operate in the same ExecutionContext.
-
-TODO: Error handling.
+Microbenchmarks are promising, showing that Async is 1.5-5x faster than Future for in some situations.
 
     ::Benchmark Future.map::
     cores: 8
@@ -17,20 +15,20 @@ TODO: Error handling.
     jvm-version: 23.6-b04
     os-arch: x86_64
     os-name: Mac OS X
-    Parameters(executionContext -> fjp, mapCount -> 0): 0.097
-    Parameters(executionContext -> fjp, mapCount -> 100): 1.637
-    Parameters(executionContext -> fjp, mapCount -> 200): 3.226
-    Parameters(executionContext -> fjp, mapCount -> 300): 4.761
-    Parameters(executionContext -> fjp, mapCount -> 400): 6.375
-    Parameters(executionContext -> fjp, mapCount -> 500): 7.762
+    Parameters(executionContext -> fjp, mapCount -> 0): 0.107
+    Parameters(executionContext -> fjp, mapCount -> 100): 1.636
+    Parameters(executionContext -> fjp, mapCount -> 200): 3.167
+    Parameters(executionContext -> fjp, mapCount -> 300): 4.624
+    Parameters(executionContext -> fjp, mapCount -> 400): 6.201
+    Parameters(executionContext -> fjp, mapCount -> 500): 7.736
     Parameters(executionContext -> imm, mapCount -> 0): 0.011
-    Parameters(executionContext -> imm, mapCount -> 100): 0.829
-    Parameters(executionContext -> imm, mapCount -> 200): 1.658
-    Parameters(executionContext -> imm, mapCount -> 300): 2.506
-    Parameters(executionContext -> imm, mapCount -> 400): 3.346
-    Parameters(executionContext -> imm, mapCount -> 500): 4.187
+    Parameters(executionContext -> imm, mapCount -> 100): 0.838
+    Parameters(executionContext -> imm, mapCount -> 200): 1.695
+    Parameters(executionContext -> imm, mapCount -> 300): 2.545
+    Parameters(executionContext -> imm, mapCount -> 400): 3.381
+    Parameters(executionContext -> imm, mapCount -> 500): 4.168
     
-    ::Benchmark AsyncFunc0.map::
+    ::Benchmark Async.map::
     cores: 8
     hostname: kina.local
     jvm-name: Java HotSpot(TM) 64-Bit Server VM
@@ -38,18 +36,18 @@ TODO: Error handling.
     jvm-version: 23.6-b04
     os-arch: x86_64
     os-name: Mac OS X
-    Parameters(executionContext -> fjp, mapCount -> 0): 0.101
-    Parameters(executionContext -> fjp, mapCount -> 100): 0.656
-    Parameters(executionContext -> fjp, mapCount -> 200): 1.239
-    Parameters(executionContext -> fjp, mapCount -> 300): 1.783
-    Parameters(executionContext -> fjp, mapCount -> 400): 2.397
-    Parameters(executionContext -> fjp, mapCount -> 500): 2.984
-    Parameters(executionContext -> imm, mapCount -> 0): 0.013
-    Parameters(executionContext -> imm, mapCount -> 100): 0.568
-    Parameters(executionContext -> imm, mapCount -> 200): 1.126
-    Parameters(executionContext -> imm, mapCount -> 300): 1.689
-    Parameters(executionContext -> imm, mapCount -> 400): 2.259
-    Parameters(executionContext -> imm, mapCount -> 500): 2.821
+    Parameters(executionContext -> fjp, mapCount -> 0): 0.019
+    Parameters(executionContext -> fjp, mapCount -> 100): 0.077
+    Parameters(executionContext -> fjp, mapCount -> 200): 0.242
+    Parameters(executionContext -> fjp, mapCount -> 300): 0.517
+    Parameters(executionContext -> fjp, mapCount -> 400): 0.889
+    Parameters(executionContext -> fjp, mapCount -> 500): 1.376
+    Parameters(executionContext -> imm, mapCount -> 0): 0.01
+    Parameters(executionContext -> imm, mapCount -> 100): 0.077
+    Parameters(executionContext -> imm, mapCount -> 200): 0.24
+    Parameters(executionContext -> imm, mapCount -> 300): 0.516
+    Parameters(executionContext -> imm, mapCount -> 400): 0.902
+    Parameters(executionContext -> imm, mapCount -> 500): 1.411
     
     ::Benchmark Future.flatMap::
     cores: 8
@@ -59,20 +57,20 @@ TODO: Error handling.
     jvm-version: 23.6-b04
     os-arch: x86_64
     os-name: Mac OS X
-    Parameters(executionContext -> fjp, mapCount -> 0): 0.108
-    Parameters(executionContext -> fjp, mapCount -> 100): 2.827
-    Parameters(executionContext -> fjp, mapCount -> 200): 5.439
-    Parameters(executionContext -> fjp, mapCount -> 300): 8.034
-    Parameters(executionContext -> fjp, mapCount -> 400): 10.744
-    Parameters(executionContext -> fjp, mapCount -> 500): 13.381
-    Parameters(executionContext -> imm, mapCount -> 0): 0.012
-    Parameters(executionContext -> imm, mapCount -> 100): 1.54
-    Parameters(executionContext -> imm, mapCount -> 200): 3.102
-    Parameters(executionContext -> imm, mapCount -> 300): 4.639
-    Parameters(executionContext -> imm, mapCount -> 400): 6.205
-    Parameters(executionContext -> imm, mapCount -> 500): 7.779
+    Parameters(executionContext -> fjp, mapCount -> 0): 0.104
+    Parameters(executionContext -> fjp, mapCount -> 100): 2.633
+    Parameters(executionContext -> fjp, mapCount -> 200): 5.283
+    Parameters(executionContext -> fjp, mapCount -> 300): 7.828
+    Parameters(executionContext -> fjp, mapCount -> 400): 10.609
+    Parameters(executionContext -> fjp, mapCount -> 500): 13.261
+    Parameters(executionContext -> imm, mapCount -> 0): 0.011
+    Parameters(executionContext -> imm, mapCount -> 100): 1.565
+    Parameters(executionContext -> imm, mapCount -> 200): 3.138
+    Parameters(executionContext -> imm, mapCount -> 300): 4.697
+    Parameters(executionContext -> imm, mapCount -> 400): 6.26
+    Parameters(executionContext -> imm, mapCount -> 500): 7.848
     
-    ::Benchmark AsyncFunc0.flatMap::
+    ::Benchmark Async.flatMap::
     cores: 8
     hostname: kina.local
     jvm-name: Java HotSpot(TM) 64-Bit Server VM
@@ -80,15 +78,15 @@ TODO: Error handling.
     jvm-version: 23.6-b04
     os-arch: x86_64
     os-name: Mac OS X
-    Parameters(executionContext -> fjp, mapCount -> 0): 0.05
-    Parameters(executionContext -> fjp, mapCount -> 100): 0.967
-    Parameters(executionContext -> fjp, mapCount -> 200): 1.849
-    Parameters(executionContext -> fjp, mapCount -> 300): 2.762
-    Parameters(executionContext -> fjp, mapCount -> 400): 3.603
-    Parameters(executionContext -> fjp, mapCount -> 500): 4.519
-    Parameters(executionContext -> imm, mapCount -> 0): 0.013
-    Parameters(executionContext -> imm, mapCount -> 100): 0.86
-    Parameters(executionContext -> imm, mapCount -> 200): 1.712
-    Parameters(executionContext -> imm, mapCount -> 300): 2.562
-    Parameters(executionContext -> imm, mapCount -> 400): 3.416
-    Parameters(executionContext -> imm, mapCount -> 500): 4.303
+    Parameters(executionContext -> fjp, mapCount -> 0): 0.006
+    Parameters(executionContext -> fjp, mapCount -> 100): 0.116
+    Parameters(executionContext -> fjp, mapCount -> 200): 0.426
+    Parameters(executionContext -> fjp, mapCount -> 300): 0.954
+    Parameters(executionContext -> fjp, mapCount -> 400): 1.707
+    Parameters(executionContext -> fjp, mapCount -> 500): 2.622
+    Parameters(executionContext -> imm, mapCount -> 0): 0.006
+    Parameters(executionContext -> imm, mapCount -> 100): 0.116
+    Parameters(executionContext -> imm, mapCount -> 200): 0.427
+    Parameters(executionContext -> imm, mapCount -> 300): 0.923
+    Parameters(executionContext -> imm, mapCount -> 400): 1.607
+    Parameters(executionContext -> imm, mapCount -> 500): 5.289
