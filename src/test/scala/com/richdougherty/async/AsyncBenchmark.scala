@@ -14,7 +14,7 @@ object AsyncBenchmark extends PerformanceTest {
   lazy val persistor = Persistor.None
 
   val ecs: Gen[String] = Gen.enumeration("executionContext")("fjp", "imm")
-  val mapCounts: Gen[Int] = Gen.range("mapCount")(0, 500, 100)
+  val mapCounts: Gen[Int] = Gen.range("mapCount")(0, 100, 50)
   val inputs = Gen.tupled(ecs, mapCounts)
 
   def ecForName(name: String): ExecutionContext = name match {
