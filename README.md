@@ -5,7 +5,7 @@ Experimental extensions to scala.concurrent.
 * AsyncRuntime - an efficient evaluator for asynchronous computations - avoids the construction of intermediate Future values, merges executions into the same AsyncContext where possible
 * AsyncContext - an ExecutionContext that can optionally combine multiple Runnables in a single call to execute()
 
-Microbenchmarks are promising, showing that Async is 1.5-5x faster than Future for in some situations.
+Microbenchmarks are promising, showing Async as 1.5-5x faster than Future for in some situations.
 
     ::Benchmark Future.map::
     cores: 8
