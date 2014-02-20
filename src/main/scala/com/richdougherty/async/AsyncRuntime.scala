@@ -13,7 +13,7 @@ object AsyncRuntime {
     def startLoop(async: Async[A], ac: AsyncContext) = try {
       loop(async, ac)
     } catch {
-      case NonFatal(t) => Failure(t)
+      case NonFatal(t) => p.failure(t)
     }
 
     @tailrec
