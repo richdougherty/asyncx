@@ -36,15 +36,31 @@ object Async {
   }
 
   final case class Thunk[+A](x: () => Async[A], ac: AsyncContext) extends Async[A] {
+    thisThunk =>
     def map[B](f: A => B)(implicit ac: AsyncContext): Async[B] = Thunk(() => x().map(f), TrivialAsyncContext)
     def flatMap[B](f: A => Async[B])(implicit ac: AsyncContext): Async[B] = Thunk(() => x().flatMap(f), TrivialAsyncContext)
-    def asyncMap[B]: AsyncFunc[AsyncFunc[A,B],Async[B]] = AsyncFunc { (f: AsyncFunc[A,B]) =>
-      Thunk(() => x().asyncMap(f).flatten, TrivialAsyncContext)
-    }(TrivialAsyncContext)
-    def asyncFlatMap[B]: AsyncFunc[AsyncFunc[A,Async[B]],Async[B]] = AsyncFunc { (f: AsyncFunc[A,Async[B]]) =>
-      Thunk(() => x().asyncMap(f).flatten.flatten, TrivialAsyncContext)
-    }(TrivialAsyncContext)
+    def asyncMap[B]: AsyncFunc[AsyncFunc[A,B],Async[B]] = Thunk.AsyncMap(this)
+    def asyncFlatMap[B]: AsyncFunc[AsyncFunc[A,Async[B]],Async[B]] = Thunk.AsyncFlatMap(this)
     def flatten[B](implicit ev: A <:< Async[B]): Async[B] = flatMap(ev)(TrivialAsyncContext)
   }
-
+  object Thunk {
+    final case class AsyncMap[A,B](thunk: Thunk[A]) extends AsyncFunc[AsyncFunc[A,B],Async[B]] {
+      def apply(f: AsyncFunc[A,B]): Async[Async[B]] = {
+        import Implicits.trivial
+        for {
+          a <- thunk
+          b <- f(a)
+        } yield Success(b)
+      }
+    }
+    final case class AsyncFlatMap[A,B](thunk: Thunk[A]) extends AsyncFunc[AsyncFunc[A,Async[B]],Async[B]] {
+      def apply(f: AsyncFunc[A,Async[B]]): Async[Async[B]] = {
+        import Implicits.trivial
+        for {
+          a <- thunk
+          asyncB <- f(a)
+        } yield asyncB
+      }
+    }
+  }
 }

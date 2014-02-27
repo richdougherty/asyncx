@@ -1,0 +1,116 @@
+
+// package com.richdougherty.async.iter
+
+// import com.richdougherty.async._
+
+// import AsyncIterator.{Step, Done, Element}
+
+// final case class AsyncIterator[+A](step: Async[Step[A]]) {
+//   def fold[B](x: B)(f: (B,A) => B)(implicit ac: AsyncContext): Async[B] = {
+//     step.flatMap(_.fold(x)(f))
+//   }
+//   //def asyncFold[B]: AsyncFunc[(B,AsyncFunc[(B,A),B],B]
+//   def map[B](f: A => B)(implicit ac: AsyncContext): AsyncIterator[B] = {
+//     AsyncIterator(step.map(_.map(f)))
+//   }
+//   def asyncMap[B]: AsyncFunc[AsyncFunc[A,B],AsyncIterator[B]] = ???
+//   def asyncFlatMap[B]: AsyncFunc[AsyncFunc[A,AsyncIterator[B]],AsyncIterator[B]] = ???
+//   // def flatMap[B](f: A => AsyncIterator[B])(implicit ac: AsyncContext): AsyncIterator[B] = {
+//   //   for {
+//   //     s1 <- step
+//   //     s2 <- 
+//   //   }
+//   // }
+//   def flatten[B <: AsyncIterator[A]](implicit ev: A <:< AsyncIterator[A]): AsyncIterator[B] = {
+//     import Implicits.trivial
+//     AsyncIterator.sync(step.map {
+//       case Element(it, next) => ev(it) ++ next.flatten(ev)
+//       case Done => empty
+//     })
+//   }
+//   def ++[B >: A](that: AsyncIterator[B]): AsyncIterator[B] = ???
+// }
+
+// object AsyncIterator {
+
+//   val empty = AsyncIterator(Async.Success(Done))
+
+//   def flatten[A](itIt: AsyncIterator[AsyncIterator[A]]): AsyncIterator[A] = {
+//     import Implicits.trivial
+//     val asyncIt: Async[AsyncIterator[A]] = itIt.step.map {
+//       case Element(it, next) => it ++ flatten(next)
+//       case Done => empty
+//     }
+//     val it: AsyncIterator[A] = sync(asyncIt)
+//     it
+//   }
+
+//   private def sync[A](a: Async[AsyncIterator[A]]): AsyncIterator[A] = {
+//     import Implicits.trivial
+//     val step: Async[Step[A]] = a.flatMap(ai => ai.step)
+//     AsyncIterator(step)
+//   }
+
+//   private final case class AsyncMap[A,B](it: AsyncIterator[A]) extends AsyncFunc[AsyncFunc[A,B],AsyncIterator[B]] {
+//     def apply(f: AsyncFunc[A,B]): Async[AsyncIterator[B]] = {
+//       import Implicits.trivial
+//       Async.Success(AsyncIterator(it.step.flatMap(_.asyncMap(f))))
+//     }
+//   }
+
+
+//   private final case class AsyncFlatMap[A,B](it: AsyncIterator[A]) extends AsyncFunc[AsyncFunc[A,AsyncIterator[B]],AsyncIterator[B]] {
+//     def apply(f: AsyncFunc[A,AsyncIterator[B]]): Async[AsyncIterator[B]] = {
+//       import Implicits.trivial
+//       for {
+//         itItB <- it.asyncMap(f)
+//       } yield flatten(itItB)
+//     }
+//   }
+
+//   sealed trait Step[+A] {
+//     def map[B](f: A => B)(implicit ac: AsyncContext): Step[B]
+//     def flatMap[B](f: A => Step[B])(implicit ac: AsyncContext): Step[B]
+//     def fold[B](x: B)(f: (B,A) => B)(implicit ac: AsyncContext): Async[B]
+//     def asyncMap[B]: AsyncFunc[AsyncFunc[A,B],Step[B]]
+//     def asyncFlatMap[B]: AsyncFunc[AsyncFunc[A,Step[B]],Step[B]]
+//   }
+
+//   final case class Element[+A](value: A, next: AsyncIterator[A]) extends Step[A] {
+//     def map[B](f: A => B)(implicit ac: AsyncContext): Step[B] = Element(f(value), next.map(f))
+//     def flatMap[B](f: A => Step[B])(implicit ac: AsyncContext): Step[B] = f(value)
+//     def asyncMap[B]: AsyncFunc[AsyncFunc[A,B],Step[B]] = Element.AsyncMap(this)
+//     def asyncFlatMap[B]: AsyncFunc[AsyncFunc[A,Step[B]],Step[B]] = Element.AsyncFlatMap(this)
+//     def fold[B](x: B)(f: (B,A) => B)(implicit ac: AsyncContext): Async[B] = {
+//       Async(f(x,value)).flatMap(y => next.fold(y)(f))(TrivialAsyncContext)
+//     }
+//   }
+
+//   object Element {
+//     private final case class AsyncMap[A,B](element: Element[A]) extends AsyncFunc[AsyncFunc[A,B],Step[B]] {
+//       def apply(f: AsyncFunc[A,B]): Async[Step[B]] = {
+//         import Implicits.trivial
+//         for {
+//           mappedValue <- f(element.value)
+//           mappedNext <- element.next.asyncMap(f)
+//         } yield Element(mappedValue, mappedNext)
+//       }
+//     }
+//     private final case class AsyncFlatMap[A,B](element: Element[A]) extends AsyncFunc[AsyncFunc[A,Step[B]],Step[B]] {
+//       def apply(f: AsyncFunc[A,Step[B]]): Async[Step[B]] = {
+//         import Implicits.trivial
+//         for {
+//           newStep <- f(element.value)
+//         } yield newStep
+//       }
+//     }
+//   }
+//   final case object Done extends Step[Nothing] {
+//     def map[B](f: Nothing => B)(implicit ac: AsyncContext): Step[B] = Done
+//     def flatMap[B](f: Nothing => Step[B])(implicit ac: AsyncContext): Step[B] = Done
+//     def asyncMap[B]: AsyncFunc[AsyncFunc[Nothing,B],Step[B]] = doneFunc
+//     def asyncFlatMap[B]: AsyncFunc[AsyncFunc[Nothing,Step[B]],Step[B]] = doneFunc
+//     def fold[B](x: B)(f: (B,Nothing) => B)(implicit ac: AsyncContext): Async[B] = Async.Success(x)
+//     private val doneFunc: AsyncFunc[Any,Step[Nothing]] = AsyncFunc.direct(_ => Async.Success(Done))
+//   }
+// }
