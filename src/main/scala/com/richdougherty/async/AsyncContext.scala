@@ -17,6 +17,12 @@ object AsyncContext {
     def canExecuteWithin(that: AsyncContext) = (this == that)
     def reportFailure(t: Throwable) = prepared.reportFailure(t)
   }
+  implicit def separate(ec: ExecutionContext) = new AsyncContext {
+    val prepared = ec.prepare
+    def execute(r: Runnable) = prepared.execute(r)
+    def canExecuteWithin(that: AsyncContext) = false
+    def reportFailure(t: Throwable) = prepared.reportFailure(t)
+  }
 }
 
 object Implicits {

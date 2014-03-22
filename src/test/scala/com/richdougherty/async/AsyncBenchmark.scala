@@ -13,20 +13,21 @@ object AsyncBenchmark extends PerformanceTest {
   lazy val reporter = new LoggingReporter
   lazy val persistor = Persistor.None
 
-  val ecs: Gen[String] = Gen.enumeration("executionContext")("fjp", "imm")
+  val acs: Gen[String] = Gen.enumeration("asyncContext")("fjp-combine", "fjp-separate", "immediate-combine")
   val mapCounts: Gen[Int] = Gen.range("mapCount")(0, 100, 50)
-  val inputs = Gen.tupled(ecs, mapCounts)
+  val inputs = Gen.tupled(acs, mapCounts)
 
-  def ecForName(name: String): ExecutionContext = name match {
-    case "fjp" => ExecutionContext.global
-    case "imm" => TrivialAsyncContext
+  def acForName(name: String): AsyncContext = name match {
+    case "fjp-combine" => AsyncContext.combining(ExecutionContext.global)
+    case "fjp-separate" => AsyncContext.separate(ExecutionContext.global)
+    case "immediate-combine" => TrivialAsyncContext
     case _ => ???
   }
 
   performance of "Future" in {
     measure method "map" in {
-      using(inputs) in { case (ecName, desiredMapCount) =>
-        implicit val implicitEC = ecForName(ecName)
+      using(inputs) in { case (acName, desiredMapCount) =>
+        implicit val implicitAC = acForName(acName)
         var fut: Future[Int] = Future(0)
         var mapCount = 0
         while (mapCount < desiredMapCount) {
@@ -40,8 +41,8 @@ object AsyncBenchmark extends PerformanceTest {
 
   performance of "Async" in {
     measure method "map" in {
-      using(inputs) in { case (ecName, desiredMapCount) =>
-        implicit val ac: AsyncContext = AsyncContext.combining(ecForName(ecName))
+      using(inputs) in { case (acName, desiredMapCount) =>
+        implicit val implicitAC = acForName(acName)
         var async: Async[Int] = Async(0)
         var mapCount = 0
         while (mapCount < desiredMapCount) {
@@ -55,8 +56,8 @@ object AsyncBenchmark extends PerformanceTest {
 
   performance of "Future" in {
     measure method "flatMap" in {
-      using(inputs) in { case (ecName, desiredMapCount) =>
-        implicit val implicitEC = ecForName(ecName)
+      using(inputs) in { case (acName, desiredMapCount) =>
+        implicit val implicitAC = acForName(acName)
         var fut: Future[Int] = Future(0)
         var mapCount = 0
         while (mapCount < desiredMapCount) {
@@ -70,8 +71,8 @@ object AsyncBenchmark extends PerformanceTest {
 
   performance of "Async" in {
     measure method "flatMap" in {
-      using(inputs) in { case (ecName, desiredMapCount) =>
-        implicit val ac: AsyncContext = AsyncContext.combining(ecForName(ecName))
+      using(inputs) in { case (acName, desiredMapCount) =>
+        implicit val implicitAC = acForName(acName)
         var async: Async[Int] = Async(0)
         var mapCount = 0
         while (mapCount < desiredMapCount) {
