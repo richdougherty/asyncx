@@ -1,6 +1,7 @@
 package com.richdougherty.async.iter
 
 import com.richdougherty.async._
+import com.richdougherty.iter.Step
 
 sealed trait AsyncIteratee[-A,+B] {
   def map[C](f: B => C)(implicit ac: AsyncContext): AsyncIteratee[A,C]
@@ -15,7 +16,7 @@ sealed trait AsyncIteratee[-A,+B] {
 
 object AsyncIteratee {
 
-  def fromFold[A,B](x: B)(f: (B,A) => B)(implicit ac: AsyncContext): AsyncIteratee[A,B] = {
+  def forFold[A,B](x: B)(f: (B,A) => B)(implicit ac: AsyncContext): AsyncIteratee[A,B] = {
     def acceptFor(x1: B): AsyncFunc[Step[A],AsyncIteratee[A,B]] = AsyncFunc {
       case Step.Element(value) => Accepting(acceptFor(f(x1,value)))
       case Step.End => Done(x1)

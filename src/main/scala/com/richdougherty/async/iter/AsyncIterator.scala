@@ -1,6 +1,7 @@
 package com.richdougherty.async.iter
 
 import com.richdougherty.async._
+import com.richdougherty.iter.Step
 
 sealed trait AsyncIterator[+A] {
   def step: Step[A]

@@ -9,14 +9,14 @@ class AsyncIterableSpec extends UnitSpec {
 
   implicit val ac = AsyncContext.combining(ExecutionContext.global)
 
-  val sumIteratee = AsyncIteratee.fromFold[Int,Int](0) { case (sum, el) => sum + el }
+  val sumIteratee = AsyncIteratee.forFold[Int,Int](0) { case (sum, el) => sum + el }
 
   "AsyncIterable.fromIterable" when {
     "applied" should {
       "give an AsyncIterable" in {
         val alist = AsyncIterable.fromIterable(List(1, 2, 3))
         val iterationResult = alist.asyncIterate(sumIteratee)
-        await(iterationResult).value should be(Some(6))
+        await(iterationResult).value should be(6)
       }
     }
   }

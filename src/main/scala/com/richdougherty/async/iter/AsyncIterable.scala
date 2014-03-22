@@ -4,8 +4,9 @@ import com.richdougherty.async._
 
 trait AsyncIterable[A] {
   def asyncIterator: Async[AsyncIterator[A]]
-  def asyncIterate[B](iteratee: AsyncIteratee[A,B]): Async[AsyncIteration.Result[A,B]] = {
-    asyncIterator.flatMap(iterator => AsyncIteration.iterate(iterator, iteratee))(TrivialAsyncContext)
+  def asyncIterate[B](iteratee: AsyncIteratee[A,B]): Async[Option[B]] = {
+    import Implicits.trivial
+    asyncIterator.flatMap(iterator => AsyncIteration.iterate(iterator, iteratee)).map(_.value)
   }
 }
 

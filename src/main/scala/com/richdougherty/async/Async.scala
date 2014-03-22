@@ -4,14 +4,24 @@ import scala.annotation.tailrec
 import scala.concurrent.Future
 
 /**
- * A reified asynchronous computation.
+ * A reified asynchronous computation. An `Async[A]` describes an asynchronous
+ * computation that yields an `A` value. An Async value can be executed multiple times by calling
+ * its `evaluate()` method. Each call to `evaluate()` returns a `Future[A]`.
+ *
+ * Constructing an `Async` and then evaluating after construction it to produce a `Future`
+ * means that the structure of the computation can be analyzed and the execution
+ * optimized.
  */
 sealed trait Async[+A] {
   def evaluate(): Future[A] = AsyncRuntime.evaluate(this)
   def map[B](f: A => B)(implicit ac: AsyncContext): Async[B]
   def flatMap[B](f: A => Async[B])(implicit ac: AsyncContext): Async[B]
+  def forEach(f: A => Unit)(implicit ac: AsyncContext): Async[Unit] = ???
+  def filter(f: A => Boolean)(implicit ac: AsyncContext): Async[A] = ???
   def asyncMap[B]: AsyncFunc[AsyncFunc[A,B],Async[B]]
   def asyncFlatMap[B]: AsyncFunc[AsyncFunc[A,Async[B]],Async[B]]
+  def asyncForEach: AsyncFunc[AsyncFunc[A,Boolean],A] = ???
+  def asyncFilter: AsyncFunc[AsyncFunc[A,Unit],Unit] = ???
   def flatten[B](implicit ev: A <:< Async[B]): Async[B]
 }
 

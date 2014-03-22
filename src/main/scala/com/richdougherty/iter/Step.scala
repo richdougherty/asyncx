@@ -1,12 +1,8 @@
-package com.richdougherty.async.iter
-
-import com.richdougherty.async._
+package com.richdougherty.iter
 
 sealed trait Step[+A] {
   def map[B](f: A => B): Step[B]
   def flatMap[B](f: A => Step[B]): Step[B]
-  def asyncMap[B]: AsyncFunc[AsyncFunc[A,B],Step[B]] = ???
-  def asyncFlatMap[B]: AsyncFunc[AsyncFunc[A,Step[B]],Step[B]] = ???
 }
 
 object Step {
